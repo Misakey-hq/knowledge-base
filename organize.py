@@ -18,36 +18,44 @@ LOG_FILE = BASE / "organize.log"
 # 排除文件（不整理）
 SKIP_FILES = {"收集箱.md"}
 
-# 分类规则: { 目标目录: { keywords: [...], extensions: [...] } }
-# 按顺序匹配，先匹配到的优先
+# 分类规则: { 目标目录: { keywords: [...], extensions?: [...] } }
+# 子分类只匹配关键词，不匹配扩展名——避免把不相关的 PDF 吸走
+# 只有 "知识图谱/论文" 用 extensions: [".pdf"] 作为兜底（关键词匹配不到的 PDF 放这里）
 RULES = {
     "项目": {
         "keywords": ["项目", "project", "计划", "milestone", "进度", "deliverable", "交付"],
     },
     "知识图谱/论文/操作": {
         "keywords": ["操作", "manipulation", "机械臂", "robot arm", "抓取", "grasp",
-                      "peg", "assembly", "装配", "push", "dexterous", "灵巧"],
-        "extensions": [".pdf"],  # 操作类PDF优先
+                      "peg", "assembly", "装配", "push", "dexterous", "灵巧",
+                      "imitation learning", "模仿学习", "diffusion policy",
+                      "action chunking", "act", "behavior cloning"],
     },
     "知识图谱/论文/导航": {
         "keywords": ["导航", "navigation", "slam", "localization", "定位",
-                      "path planning", "路径规划", "mapping", "建图"],
+                      "path planning", "路径规划", "mapping", "建图", "lidar",
+                      "激光雷达", "里程计", "odometry"],
     },
     "知识图谱/论文/感知": {
         "keywords": ["感知", "perception", "检测", "detection", "分割", "segmentation",
-                      "vit", "vision transformer", "cnn", "resnet", "pointnet"],
+                      "vit", "vision transformer", "cnn", "resnet", "pointnet",
+                      "dino", "clip", "sam", "grounding", "yolo", "detr",
+                      "自监督", "self-supervised", "ssl", "对比学习",
+                      "contrastive", "visual", "视觉", "图像", "image",
+                      "特征提取", "feature", "backbone", "预训练", "pretrain"],
     },
     "知识图谱/论文/移动": {
         "keywords": ["移动", "locomotion", "行走", "walking", "四足", "quadruped",
-                      "双足", "biped", "腿足"],
+                      "双足", "biped", "腿足", "步态", "gait"],
     },
     "知识图谱/论文/通用方法": {
         "keywords": ["通用方法", "transformer", "强化学习", "reinforcement learning",
-                      "模仿学习", "imitation learning", "diffusion", "扩散",
-                      "policy", "diffusion policy"],
+                      "diffusion", "扩散", "generative", "生成",
+                      "world model", "世界模型", "foundation model", "基础模型",
+                      "大模型", "llm", "vlm", "多模态", "multimodal"],
     },
     "知识图谱/论文": {
-        "extensions": [".pdf"],
+        "extensions": [".pdf"],  # 兜底：匹配不到任何子分类的 PDF 放这里
     },
     "知识图谱/工具": {
         "keywords": ["工具", "tool", "安装", "install", "配置", "config", "setup",
@@ -111,21 +119,21 @@ def classify(file: Path) -> str | None:
 
     for target, rule in RULES.items():
         score = 0
-        # 扩展名匹配
+        # 扩展名匹配（弱信号，作为兜底）
         if "extensions" in rule and ext in rule["extensions"]:
-            score += 2
-        # 关键词匹配
+            score += 1
+        # 关键词匹配（强信号，每个关键词 +5）
         for kw in rule.get("keywords", []):
             if kw.lower() in search_text:
-                score += 3
+                score += 5
         if score > 0:
             scores[target] = score
 
     if not scores:
         return None
 
-    # 选得分最高的
-    best = max(scores, key=scores.get)
+    # 选得分最高的；同分则选路径更具体的（层级更深的）
+    best = max(scores, key=lambda t: (scores[t], t.count("/")))
     return best
 
 
