@@ -3,3 +3,4 @@
 .obsidian/cache
 organize.log
 sync.log
+__pycache__/
