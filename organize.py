@@ -112,8 +112,9 @@ def classify(file: Path) -> str | None:
         except Exception:
             pass
 
-    # 合并搜索文本: 文件名 + 内容
+    # 合并搜索文本: 文件名 + 内容，统一分隔符为空格
     search_text = f"{name} {text}".lower()
+    search_text = search_text.replace("_", " ").replace("-", " ")
 
     scores = {}  # {target: score}
 
